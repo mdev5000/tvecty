@@ -6,7 +6,7 @@ import (
 )
 
 type filler struct {
-	line int
+	line  int
 	ftype string
 	value string
 }
@@ -14,15 +14,14 @@ type filler struct {
 func ignore(i interface{}) {
 }
 
-
 func main() {
 	fillers := map[int]filler{
 		1: {line: 20, ftype: "html-return", value: `<div>
-	{s: msg}
+	{s:msg}
 	{something()}
 </div>`},
 		2: {line: 20, ftype: "html-inline", value: `<div>
-	{s: fmt.Sprintf("element %d", i)
+	{s:fmt.Sprintf("element %d", i)}
 </div>
 `},
 	}

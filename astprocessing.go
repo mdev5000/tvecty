@@ -18,10 +18,10 @@ func FinishHtmlFuncDefinitions(f *dst.File) error {
 		if len(comments) == 0 {
 			lastComment = ""
 		} else {
-			lastComment = comments[len(comments) - 1]
+			lastComment = comments[len(comments)-1]
 		}
 		if strings.HasPrefix(lastComment, "/*!!htmlfunc") {
-			df.Decs.NodeDecs.Start = comments[:len(comments) - 1]
+			df.Decs.NodeDecs.Start = comments[:len(comments)-1]
 			if df.Type.Results == nil {
 				df.Type.Results = &dst.FieldList{
 					Opening: false,
@@ -32,13 +32,13 @@ func FinishHtmlFuncDefinitions(f *dst.File) error {
 			}
 			df.Type.Results.List = append(df.Type.Results.List, &dst.Field{
 				Names: nil,
-				Type:  &dst.SelectorExpr{
+				Type: &dst.SelectorExpr{
 					X:    dst.NewIdent("vecty"),
 					Sel:  dst.NewIdent("HTMLOrComponent"),
 					Decs: dst.SelectorExprDecorations{},
 				},
-				Tag:   nil,
-				Decs:  dst.FieldDecorations{},
+				Tag:  nil,
+				Decs: dst.FieldDecorations{},
 			})
 		}
 	}

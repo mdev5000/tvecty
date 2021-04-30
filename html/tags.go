@@ -33,7 +33,7 @@ func (t *TagOrText) debugString(w io.Writer, depth string) {
 	if t.TagName == "" {
 		fmt.Fprint(w, depth)
 		if t.IsGoCodeEmbed() {
-			fmt.Fprintln(w, "embed:" + t.Text)
+			fmt.Fprintln(w, "embed:"+t.Text)
 		} else {
 			fmt.Fprintln(w, t.Text)
 		}
@@ -58,7 +58,6 @@ func (t *TagOrText) IsGoCodeEmbed() bool {
 	s := strings.TrimSpace(t.Text)
 	return strings.HasPrefix(s, "{") && strings.HasSuffix(s, "}")
 }
-
 
 //func (t *TagOrText) WriteText(w io.Writer) {
 //	if t.IsComponent() {
