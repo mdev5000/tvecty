@@ -7,6 +7,8 @@ import (
 
 // FinishHtmlFuncDefinitions trims the comments indicating a function is an html
 // function and adds the correct return type.
+// An html function has no return since the return is always vecty.HTMLOrComponent
+// Ex.  html MyHtmlFn() { /* ... */	}
 func FinishHtmlFuncDefinitions(f *dst.File) error {
 	for _, d := range f.Decls {
 		df, ok := d.(*dst.FuncDecl)
