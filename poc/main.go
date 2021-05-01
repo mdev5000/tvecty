@@ -1,8 +1,11 @@
 package main
 
 import (
+	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"github.com/mdev5000/tvecty"
+	"go/token"
+	"strconv"
 )
 
 type filler struct {
@@ -14,37 +17,66 @@ type filler struct {
 func ignore(i interface{}) {
 }
 
-func main() {
-	fillers := map[int]filler{
-		1: {line: 20, ftype: "html-return", value: `<div>
-	{s:msg}
-	{something()}
-</div>`},
-		2: {line: 20, ftype: "html-inline", value: `<div>
-	{s:fmt.Sprintf("element %d", i)}
-</div>
-`},
+func stringLit(s string) *dst.BasicLit {
+	return &dst.BasicLit{
+		Kind:  token.STRING,
+		Value: s,
+		Decs:  dst.BasicLitDecorations{},
 	}
-	ignore(fillers)
+}
 
+func simpleCallExpr(x, sel string, args []dst.Expr) *dst.CallExpr {
+	return &dst.CallExpr{
+		Decs: dst.CallExprDecorations{
+			NodeDecs: dst.NodeDecs{
+				Before: dst.SpaceType(1),
+				Start:  nil,
+				End:    nil,
+				After:  dst.SpaceType(1),
+			},
+		},
+		Fun: &dst.SelectorExpr{
+			X:   dst.NewIdent(x),
+			Sel: dst.NewIdent(sel),
+			Decs: dst.SelectorExprDecorations{
+				NodeDecs: dst.NodeDecs{
+					Before: dst.SpaceType(1),
+					Start:  nil,
+					End:    nil,
+					After:  dst.SpaceType(1),
+				},
+			},
+		},
+		Args:     args,
+		Ellipsis: false,
+	}
+}
+
+type fakeReplace struct {
+}
+
+func (fakeReplace) Get(id int) (dst.Expr, bool) {
+	return simpleCallExpr("replaced", "This", []dst.Expr{stringLit(strconv.Itoa(id))}), true
+}
+
+func main() {
 	code := `package thing
 
-/*!!htmlfunc:*/ func RenderThing(msg string) {
-	tvecty.Filler("1")
-	//!!filler
-	//!!filler
+var thing = tvecty.Html(1, "another")
+
+func RenderThing(msg string) vecty.HTMLOrComponent {
+	return tvecty.Html(2, "<div>test</div>")
 }
 
 func Another() vecty.HTMLOrComponent {
-	RenderThing()
+	var thing vecty.HTMLOrComponent = tvecty.Html(3, "<div>another</div>")
+	thing2 := tvecty.Html(4, "<div>another</div>")
 }
 
 func List() []vecty.HTMLOrComponent {
 	var arr []vecty.HTMLOrComponent
 	for i := 0; i < 10; i++ {
-		/*!!start:htmltemplate*/ arr[0] = tvecty.Filler("2")
-		//!!filler
-		//!!filler
+		arr[0] = tvecty.Html(5, "<div>another</div>")
 	}
 	return i
 }
@@ -53,12 +85,18 @@ func List() []vecty.HTMLOrComponent {
 	if err != nil {
 		panic(err)
 	}
+	//spew.Dump(f.Decls[2])
 
-	if err := tvecty.FinishHtmlFuncDefinitions(f); err != nil {
+	err = tvecty.Replace(fakeReplace{}, f)
+	if err != nil {
 		panic(err)
 	}
-	//fmt.Println(len(f.Decls))
 
+	//if err := tvecty.FinishHtmlFuncDefinitions(f); err != nil {
+	//	panic(err)
+	//}
+	////fmt.Println(len(f.Decls))
+	//
 	if err := decorator.Print(f); err != nil {
 		panic(err)
 	}
