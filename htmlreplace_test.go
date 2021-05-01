@@ -7,11 +7,11 @@ import (
 	"testing"
 )
 
-func TestPlacesAllHtmlInAVectyWrapper(t *testing.T) {
+func TestPlacesHtmlInAVectyWrapper(t *testing.T) {
 	in := `package somepackage
 
-html MyRender() {
-	<div>
+func MyRender() vecty.HTMLOrComponent {
+	return <div>
 		<span>
 			Content
 		</span>
@@ -19,17 +19,45 @@ html MyRender() {
 }
 `
 
-	b := bytes.NewBuffer(nil)
-	require.NoError(t, SourceHtmlReplace(b, in))
-	requireEqStr(t, b.String(), strings.Replace(`
+	tracker := newHtmlTracker()
+	src := bytes.NewReader([]byte(in))
+	srcOut := bytes.NewBuffer(nil)
+
+	tracker, err := sourceHtmlReplace(tracker, srcOut, src)
+	require.NoError(t, err)
+	requireEqStr(t, srcOut.String(), strings.Replace(`
 package somepackage
 
-html MyRender() {
-	tvecty.Html(:tick:<div>
+func MyRender() vecty.HTMLOrComponent {
+	return tvecty.Html(1, :tick:<div>
 		<span>
 			Content
 		</span>
 	</div>:tick:)
 }
 `, ":tick:", "`", -1))
+}
+
+func TestCorrectlyExtractsHtmlTagInformation(t *testing.T) {
+	in := `package somepackage
+
+func MyRender() vecty.HTMLOrComponent {
+	return <div>
+		<span>
+			Content
+		</span>
+	</div>
+}
+`
+	tracker := newHtmlTracker()
+	src := bytes.NewReader([]byte(in))
+	srcOut := bytes.NewBuffer(nil)
+	tracker, err := sourceHtmlReplace(tracker, srcOut, src)
+	require.NoError(t, err)
+	require.Len(t, tracker, 1)
+	require.Equal(t, `
+div 
+  span 
+    Content
+`, tracker[0].DebugString())
 }

@@ -1,8 +1,9 @@
 package html
 
 import (
+	"bytes"
 	"github.com/stretchr/testify/require"
-	"strings"
+	"io"
 	"testing"
 )
 
@@ -74,7 +75,7 @@ div class="some-thing"
 }
 
 func TestReadUntilDepthIsZero(t *testing.T) {
-	r := strings.NewReader(`<div class="some-thing">
+	src := `<div class="some-thing">
   <div class="another thing">
 	{&Header{}}
   </div>
@@ -83,9 +84,19 @@ func TestReadUntilDepthIsZero(t *testing.T) {
 </div>
 
 some stuff after
-`)
-	tag, remaining, err := ParseHtml2(r)
+`
+	r := bytes.NewReader([]byte(src))
+	tag, htmlSrc, err := ParseHtml(r)
 	require.Nil(t, err)
 	require.NotNil(t, tag)
+	require.Equal(t, `<div class="some-thing">
+  <div class="another thing">
+	{&Header{}}
+  </div>
+  {s.someComp()}
+  <img src="some/path.png" />
+</div>`, string(htmlSrc))
+	remaining, err := io.ReadAll(r)
+	require.NoError(t, err)
 	require.Equal(t, "\n\nsome stuff after\n", string(remaining))
 }

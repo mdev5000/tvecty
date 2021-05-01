@@ -4,73 +4,23 @@ import (
 	"bytes"
 	"fmt"
 	"golang.org/x/net/html"
-	"io"
 	"strings"
 )
 
 func ParseHtmlString(htmlRaw string) (*TagOrText, error) {
-	return ParseHtml([]byte(htmlRaw))
+	r := bytes.NewReader([]byte(htmlRaw))
+	tag, _, err := ParseHtml(r)
+	return tag, err
 }
 
-func ParseHtml(htmlRaw []byte) (*TagOrText, error) {
+// ParseHtml Reads and parses the html from the starting tag to the matching end tag. If the tag depth is inconsistent
+// or the tags at the same depth are not the same type then an error is returned.
+//
+// After the html is parsed r is reset to the remaining bytes that have not been parsed.
+//
+func ParseHtml(r *bytes.Reader) (tag *TagOrText, htmlSrc []byte, err error) {
 	stack := &tagStack{}
-	b := bytes.NewBuffer(htmlRaw)
-	z := html.NewTokenizer(b)
-	var lastPop *TagOrText
-	for {
-		tt := z.Next()
-
-		switch tt {
-		case html.ErrorToken:
-			err := z.Err()
-			if err.Error() == "EOF" {
-				return lastPop, nil
-			} else {
-				return lastPop, err
-			}
-		case html.TextToken:
-			txt := string(z.Text())
-			txtT := strings.TrimSpace(txt)
-			if txtT == "" {
-				continue
-			}
-			tag := &TagOrText{Text: txtT}
-			if err := stack.pushChild(tag); err != nil {
-				return lastPop, err
-			}
-		case html.SelfClosingTagToken:
-			tnb, hasAttr := z.TagName()
-			tag := &TagOrText{TagName: string(tnb)}
-			if hasAttr {
-				tag.Attr = parseAttributes(z)
-			}
-			if err := stack.pushChild(tag); err != nil {
-				return lastPop, err
-			}
-		case html.StartTagToken:
-			tnb, hasAttr := z.TagName()
-			tag := &TagOrText{TagName: string(tnb)}
-			if hasAttr {
-				tag.Attr = parseAttributes(z)
-			}
-			stack.push(tag)
-		case html.EndTagToken:
-			var err error
-			lastPop, err = stack.pop()
-			if err != nil {
-				return lastPop, err
-			}
-			tnb, _ := z.TagName()
-			tn := string(tnb)
-			if tn != lastPop.TagName {
-				return lastPop, fmt.Errorf("expected closing tag '%s' but was '%s'", lastPop.TagName, tn)
-			}
-		}
-	}
-}
-
-func ParseHtml2(r io.Reader) (*TagOrText, []byte, error) {
-	stack := &tagStack{}
+	remainingAtStart := int64(r.Len())
 	z := html.NewTokenizer(r)
 	var lastPop *TagOrText
 	currentDepth := 0
@@ -128,7 +78,15 @@ func ParseHtml2(r io.Reader) (*TagOrText, []byte, error) {
 				return lastPop, nil, fmt.Errorf("expected closing tag '%s' but was '%s'", lastPop.TagName, tn)
 			}
 			if currentDepth == 0 {
-				return lastPop, z.Buffered(), nil
+				// Extract the html content just parsed into html and return it to the caller.
+				remainingBuffer := z.Buffered()
+				prevSize := r.Size() - int64(len(remainingBuffer))
+				startIndex := r.Size() - remainingAtStart
+				startHtml := make([]byte, prevSize-startIndex)
+				_, err := r.ReadAt(startHtml, startIndex)
+				// Then set the r to whatever bytes were remaining after parsing the html.
+				r.Reset(remainingBuffer)
+				return lastPop, startHtml, err
 			}
 		}
 	}

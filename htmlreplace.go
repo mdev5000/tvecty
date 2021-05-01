@@ -1,152 +1,129 @@
 package tvecty
 
 import (
+	"bytes"
 	"fmt"
-	"github.com/mdev5000/tvecty/internal/strtokenizer"
+	"github.com/mdev5000/tvecty/html"
 	"io"
 )
 
-type htmlReplaceStateFn = func(w io.Writer, t *strtokenizer.StringCharacterIndex) error
+type htmlReplaceReader = bytes.Reader
+
+type htmlReplaceStateFn = func(w io.Writer) (bool, error)
 
 type htmlReplaceState struct {
+	ht           htmlTracker
 	htmlTagDepth int
-	prevStateFn htmlReplaceStateFn
-	stateFn htmlReplaceStateFn
+	prevStateFn  htmlReplaceStateFn
+	stateFn      htmlReplaceStateFn
+	r            *htmlReplaceReader
 }
 
-// @todo better handle unmatched html tags.
-func SourceHtmlReplace(w io.Writer, src string) error {
-	t := strtokenizer.NewStringCharacterIndex(src)
-	rs := htmlReplaceState{}
+func sourceHtmlReplace(ht htmlTracker, w io.Writer, src *bytes.Reader) (htmlTracker, error) {
+	rs := htmlReplaceState{ht: ht, r: src}
 	rs.stateFn = rs.htmlStateReadChars
-	for t.HasNext() {
-		if err := rs.stateFn(w, t); err != nil {
-			return err
+	for {
+		if done, err := rs.stateFn(w); err != nil {
+			return nil, err
+		} else if done {
+			return rs.ht, nil
 		}
 	}
-	return nil
 }
 
-func (rs *htmlReplaceState) htmlStateReadChars(w io.Writer, t *strtokenizer.StringCharacterIndex) error {
-	for t.HasNext() {
-		c := t.NextValue()
+func (rs *htmlReplaceState) htmlStateReadChars(w io.Writer) (bool, error) {
+	for {
+		c, _, err := rs.r.ReadRune()
+		if err == io.EOF {
+			return true, nil
+		}
+		if err != nil {
+			return true, err
+		}
 		switch c {
+		case '<':
+			// Unread so the html can be correctly parsing, ex. <div> instead of div>.
+			err = rs.r.UnreadRune()
+			rs.stateFn = rs.htmlStateReadHtml
+			return false, err
 		case '"':
 			err := writeRune(w, c)
 			rs.prevStateFn = rs.htmlStateReadChars
 			rs.stateFn = rs.htmlStateReadStringQuote
-			return err
+			return false, err
 		case '`':
 			err := writeRune(w, c)
 			rs.prevStateFn = rs.htmlStateReadChars
 			rs.stateFn = rs.htmlStateReadStringTick
-			return err
-		case '<':
-			_, err := fmt.Fprint(w, "tvecty.Html(`")
-			if err != nil {
-				return err
-			}
-			err = writeRune(w, c)
-			rs.htmlTagDepth = 1
-			rs.stateFn = rs.htmlStateReadHtml
-			return err
+			return false, err
 		default:
 			err := writeRune(w, c)
 			if err != nil {
-				return err
+				return false, err
 			}
 		}
 	}
-	return nil
 }
 
-func (rs *htmlReplaceState) htmlStateReadStringQuote(w io.Writer, t *strtokenizer.StringCharacterIndex) error {
-	return rs.htmlStateReadString(w, t, '"')
+func (rs *htmlReplaceState) htmlStateReadStringQuote(w io.Writer) (bool, error) {
+	return rs.htmlStateReadString(w, '"')
 }
 
-func (rs *htmlReplaceState) htmlStateReadStringTick(w io.Writer, t *strtokenizer.StringCharacterIndex) error {
-	return rs.htmlStateReadString(w, t, '`')
+func (rs *htmlReplaceState) htmlStateReadStringTick(w io.Writer) (bool, error) {
+	return rs.htmlStateReadString(w, '`')
 }
 
-func (rs *htmlReplaceState) htmlStateReadString(w io.Writer, t *strtokenizer.StringCharacterIndex, quoteChar rune) error {
-	for t.HasNext() {
-		c := t.NextValue()
+func (rs *htmlReplaceState) htmlStateReadString(w io.Writer, quoteChar rune) (bool, error) {
+	for {
+		c, n, err := rs.r.ReadRune()
+		if err != nil {
+			return true, err
+		}
+		if n == 0 {
+			return true, nil
+		}
 		switch c {
 		case '\\':
 			// Next character will be an escaped character, so read this character
 			// and then next one, that way the next character is not parsed.
 			err := writeRune(w, c)
 			if err != nil {
-				return err
+				return true, err
 			}
-			if t.HasNext() {
-				c := t.NextValue()
-				err := writeRune(w, c)
-				if err != nil {
-					return err
-				}
+			c, n, err := rs.r.ReadRune()
+			if err != nil {
+				return true, err
+			}
+			if n == 0 {
+				return true, nil
+			}
+			err = writeRune(w, c)
+			if err != nil {
+				return true, err
 			}
 		case quoteChar:
 			err := writeRune(w, c)
 			rs.stateFn = rs.prevStateFn
-			return err
+			return false, err
 		default:
 			err := writeRune(w, c)
 			if err != nil {
-				return err
+				return true, err
 			}
 		}
 	}
-	return nil
 }
 
-func (rs *htmlReplaceState) htmlStateReadHtml(w io.Writer, t *strtokenizer.StringCharacterIndex) error {
-	for t.HasNext() {
-		c := t.NextValue()
-		switch c {
-		case '"':
-			err := writeRune(w, c)
-			rs.prevStateFn = rs.htmlStateReadHtml
-			rs.stateFn = rs.htmlStateReadStringQuote
-			return err
-		case '<':
-			err := writeRune(w, c)
-			if err != nil {
-				return err
-			}
-			if !t.HasNext() {
-				continue
-			}
-			c = t.NextValue()
-			// Check if is opening on closing (ex. <tag> or </tag>)
-			if c == '/' {
-				rs.htmlTagDepth -= 1
-			} else {
-				rs.htmlTagDepth += 1
-			}
-			err = writeRune(w, c)
-			rs.stateFn = rs.htmlStateReadHtml
-			return err
-		case '>':
-			err := writeRune(w, c)
-			if err != nil {
-				return err
-			}
-			if rs.htmlTagDepth < 0 {
-				panic("invalid html tag depth")
-			} else if rs.htmlTagDepth == 0 {
-				_, err = fmt.Fprint(w, "`)")
-				rs.stateFn = rs.htmlStateReadChars
-				return err
-			}
-		default:
-			err := writeRune(w, c)
-			if err != nil {
-				return err
-			}
-		}
+func (rs *htmlReplaceState) htmlStateReadHtml(w io.Writer) (bool, error) {
+	tag, htmlSrc, err := html.ParseHtml(rs.r)
+	if err != nil {
+		return true, err
 	}
-	return nil
+	var tagId htmlTrackingId
+	rs.ht, tagId = rs.ht.add(tag)
+	_, err = fmt.Fprintf(w, "tvecty.Html(%d, `%s`)", tagId, htmlSrc)
+	rs.stateFn = rs.htmlStateReadChars
+	return false, err
 }
 
 func writeRune(w io.Writer, c rune) error {
