@@ -2,6 +2,7 @@ package html
 
 import (
 	"github.com/stretchr/testify/require"
+	"strings"
 	"testing"
 )
 
@@ -70,4 +71,21 @@ div class="some-thing"
   embed:{s.someComp()}
   img src="some/path.png"
 `)
+}
+
+func TestReadUntilDepthIsZero(t *testing.T) {
+	r := strings.NewReader(`<div class="some-thing">
+  <div class="another thing">
+	{&Header{}}
+  </div>
+  {s.someComp()}
+  <img src="some/path.png" />
+</div>
+
+some stuff after
+`)
+	tag, remaining, err := ParseHtml2(r)
+	require.Nil(t, err)
+	require.NotNil(t, tag)
+	require.Equal(t, "\n\nsome stuff after\n", string(remaining))
 }
