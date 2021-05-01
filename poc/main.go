@@ -80,12 +80,16 @@ func List() []vecty.HTMLOrComponent {
 	}
 	return i
 }
+
+func InFunctionCall() []vecty.HTMLOrComponent {
+	return someCall(tvecty.Html(5, "<div>another</div>"))
+}
 `
 	f, err := decorator.Parse(code)
 	if err != nil {
 		panic(err)
 	}
-	//spew.Dump(f.Decls[2])
+	//spew.Dump(f.Decls[4])
 
 	err = tvecty.Replace(fakeReplace{}, f)
 	if err != nil {

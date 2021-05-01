@@ -32,6 +32,11 @@ func Replace(h ReplacementFinder, f *dst.File) error {
 				err = ierr
 				return false
 			}
+		case *dst.CallExpr:
+			if ierr := tryConvertExprsToVectyCall(h, expr.Args); ierr != nil {
+				err = ierr
+				return false
+			}
 		}
 		return true
 	})
