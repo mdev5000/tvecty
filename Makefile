@@ -1,6 +1,6 @@
 
 local: FORCE
-	go build -o ~/.bin/tvecty main/tvecty/main.go
+	go build -o ~/.bin/tvecty cmd/tvecty/main.go
 
 test: FORCE
 	go test ./...

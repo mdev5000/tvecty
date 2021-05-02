@@ -43,7 +43,7 @@ func run() error {
 func cmdCompileDir() *cobra.Command {
 	var outSuffix string
 	compileFile := cobra.Command{
-		Use:     "dir [*file-glob]",
+		Use: "dir [*file-glob]",
 		Example: `
   tvecty c d somepackage/*.vtpl
   tvecty c d somepackage/**/*.vtpl`,
