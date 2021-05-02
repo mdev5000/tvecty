@@ -10,7 +10,7 @@ import (
 func stringLit(s string) *dst.BasicLit {
 	return &dst.BasicLit{
 		Kind:  token.STRING,
-		Value: s,
+		Value: `"` + s + `"`,
 		Decs:  dst.BasicLitDecorations{},
 	}
 }

@@ -1,34 +1,25 @@
 package main
 
 import (
-	"bytes"
-	"fmt"
-	"github.com/mdev5000/tvecty"
+	"github.com/dave/dst/decorator"
+	"github.com/davecgh/go-spew/spew"
 )
 
 func main() {
 	src := `package something
 
 func Render(msg string) vecty.ComponentOrHTML {
-	another := <div>
-		<div>
-			{s:"Part"}
-		</div>
-		<div>
-			{s:"Subpart"}
-		</div>
-	</div>
-	return <div>
-		<span>
-			{s:msg}
-			{another}
-		</span>
-	</div>
+	return vecty.Class("some-class", myvar)
 }
 `
-	b := bytes.NewBuffer(nil)
-	if err := tvecty.ConvertToVecty("", b, []byte(src)); err != nil {
+	f, err := decorator.Parse(src)
+	if err != nil {
 		panic(err)
 	}
-	fmt.Println(b.String())
+	spew.Dump(f.Decls[0])
+	//b := bytes.NewBuffer(nil)
+	//if err := tvecty.ConvertToVecty("", b, []byte(src)); err != nil {
+	//	panic(err)
+	//}
+	//fmt.Println(b.String())
 }

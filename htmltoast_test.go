@@ -57,3 +57,20 @@ func RenderThing(msg string) vecty.HTMLOrComponent {
 		something())
 }`)
 }
+
+func TestParsesAndInsertsAttributes(t *testing.T) {
+	htmlS := `<div class="some-class {myvar}">{s:"stuff"}</div>`
+	expr, err := htmlToDst(htmlS)
+	require.NoError(t, err)
+	requireEqStr(t, tWrapExpr(t, expr), `
+package thing
+
+func RenderThing(msg string) vecty.HTMLOrComponent {
+	elem.Div(
+		vecty.Markup(
+			vecty.Class("some-class", myvar),
+		),
+		vecty.Text("stuff"),
+	)
+}`)
+}
