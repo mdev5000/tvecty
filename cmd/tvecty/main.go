@@ -80,7 +80,7 @@ func cmdCompileFile() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var out io.Writer
 			if len(args) > 1 {
-				out, err := os.OpenFile(args[1], os.O_WRONLY|os.O_CREATE, 0664)
+				out, err := openFile(args[1])
 				if err != nil {
 					return err
 				}
@@ -113,12 +113,16 @@ func matchFiles(dir, glob, debugName string) ([]string, error) {
 }
 
 func compileFileToPath(fPathIn, fPathOut string) error {
-	out, err := os.OpenFile(fPathOut, os.O_WRONLY|os.O_CREATE, 0664)
+	out, err := openFile(fPathOut)
 	if err != nil {
 		return err
 	}
 	defer out.Close()
 	return compileFile(fPathIn, out, false)
+}
+
+func openFile(path string) (*os.File, error) {
+	return os.OpenFile(path, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0664)
 }
 
 func compileFile(fPathIn string, out io.Writer, noHtml bool) error {
