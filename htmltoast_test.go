@@ -58,7 +58,7 @@ func RenderThing(msg string) vecty.HTMLOrComponent {
 }`)
 }
 
-func TestParsesAndInsertsAttributes(t *testing.T) {
+func TestParsesAndInsertsMultivalueAttributesAttributes(t *testing.T) {
 	htmlS := `<div class="some-class {myvar}">{s:"stuff"}</div>`
 	expr, err := htmlToDst(htmlS)
 	require.NoError(t, err)
@@ -69,6 +69,23 @@ func RenderThing(msg string) vecty.HTMLOrComponent {
 	elem.Div(
 		vecty.Markup(
 			vecty.Class("some-class", myvar),
+		),
+		vecty.Text("stuff"),
+	)
+}`)
+}
+
+func TestParsesCustomAttributesAsSingleValue(t *testing.T) {
+	htmlS := `<div data-ducks="this is all one argument">{s:"stuff"}</div>`
+	expr, err := htmlToDst(htmlS)
+	require.NoError(t, err)
+	requireEqStr(t, tWrapExpr(t, expr), `
+package thing
+
+func RenderThing(msg string) vecty.HTMLOrComponent {
+	elem.Div(
+		vecty.Markup(
+			vecty.Attribute("data-ducks", "this is all one argument"),
 		),
 		vecty.Text("stuff"),
 	)

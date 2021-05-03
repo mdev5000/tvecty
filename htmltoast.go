@@ -75,7 +75,7 @@ func parseTagAttributes(existing []dst.Expr, tag *html.TagOrText) ([]dst.Expr, e
 	for i, attr := range tag.Attr {
 		switch attr.Name {
 		case "class":
-			attrExpr, err := parseAttributeValue(nil, attr.Value)
+			attrExpr, err := parseMultipleAttributeValue(nil, attr.Value)
 			if err != nil {
 				return existing, err
 			}
@@ -87,7 +87,7 @@ func parseTagAttributes(existing []dst.Expr, tag *html.TagOrText) ([]dst.Expr, e
 			}
 			markupArgs[i] = simpleCallExpr("event", "Click", []dst.Expr{expr})
 		default:
-			attrExpr, err := parseAttributeValue([]dst.Expr{stringLit(attr.Name)}, attr.Value)
+			attrExpr, err := parseSingleAttributeValue([]dst.Expr{stringLit(attr.Name)}, attr.Value)
 			if err != nil {
 				return existing, err
 			}
@@ -110,7 +110,10 @@ func tagNameToVectyElem(tagName string) (string, string) {
 	}
 }
 
-func parseAttributeValue(existing []dst.Expr, attrValue string) ([]dst.Expr, error) {
+// Parse an attribute value into a multiple arguments. Current this is done by split on space, but may change in the
+// future. Example the attribute value "cool stuff" would be created as a two separate arguments
+// (ex vecty.Class("cool", "stuff"))
+func parseMultipleAttributeValue(existing []dst.Expr, attrValue string) ([]dst.Expr, error) {
 	for _, p := range strings.Split(attrValue, " ") {
 		expr, err := parseExpressionWrapper(p)
 		if err != nil {
@@ -122,6 +125,19 @@ func parseAttributeValue(existing []dst.Expr, attrValue string) ([]dst.Expr, err
 		existing = append(existing, expr)
 	}
 	return existing, nil
+}
+
+// Parse an attribute value into a single argument. Example the attribute value "cool stuff"
+// would be created as a single argument (ex vecty.Attr("first value", "cool stuff"))
+func parseSingleAttributeValue(existing []dst.Expr, attrValue string) ([]dst.Expr, error) {
+	expr, err := parseExpressionWrapper(attrValue)
+	if err != nil {
+		return existing, err
+	}
+	if expr == nil {
+		expr = stringLit(attrValue)
+	}
+	return append(existing, expr), nil
 }
 
 func parseExpressionWrappers(existing []dst.Expr, exprs string) ([]dst.Expr, error) {
