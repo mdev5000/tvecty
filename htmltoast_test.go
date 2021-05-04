@@ -6,6 +6,7 @@ import (
 	"github.com/dave/dst/decorator"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"text/template"
 )
 
 // Replaces the body contents with the expr passed to this function.
@@ -90,4 +91,48 @@ func RenderThing(msg string) vecty.HTMLOrComponent {
 		vecty.Text("stuff"),
 	)
 }`)
+}
+
+func TestConvertsTagsWithSpecialNames(t *testing.T) {
+	special := []struct {
+		Tag string
+		Out string
+	}{
+		{"h1", "Heading1"},
+		{"h2", "Heading2"},
+		{"h3", "Heading3"},
+		{"h4", "Heading4"},
+		{"h5", "Heading5"},
+		{"h6", "Heading6"},
+		{"nav", "Navigation"},
+		{"img", "Image"},
+		{"a", "Anchor"},
+		{"hr", "HorizontalRule"},
+		{"cite", "Citation"},
+		//{"abbr", "Abbreviation"}, //?
+	}
+	inTpl := template.Must(template.New("in").Parse(`<div>
+	<{{.Tag}}></{{.Tag}}>
+</div>`))
+	outTpl := template.Must(template.New("out").Parse(`
+package thing
+
+func RenderThing(msg string) vecty.HTMLOrComponent {
+	elem.Div(
+		elem.{{.Out}}(),
+	)
+}`))
+	for _, s := range special {
+		sinner := s
+		t.Run("converts Tag "+s.Tag+" to "+s.Out, func(t *testing.T) {
+			html := bytes.NewBuffer(nil)
+			require.NoError(t, inTpl.Execute(html, sinner))
+			expr, err := htmlToDst(html.String())
+			require.NoError(t, err)
+			expected := bytes.NewBuffer(nil)
+			require.NoError(t, outTpl.Execute(expected, sinner))
+			requireEqStr(t, tWrapExpr(t, expr), expected.String())
+
+		})
+	}
 }

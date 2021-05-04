@@ -103,8 +103,14 @@ func tagNameToVectyElem(tagName string) (string, string) {
 		return "elem", "Anchor"
 	case "img":
 		return "elem", "Image"
+	case "nav":
+		return "elem", "Navigation"
 	case "hr":
 		return "elem", "HorizontalRule"
+	case "h1", "h2", "h3", "h4", "h5", "h6":
+		return "elem", "Heading" + tagName[1:]
+	case "cite":
+		return "elem", "Citation"
 	default:
 		return "elem", strings.ToUpper(tagName[0:1]) + tagName[1:]
 	}
