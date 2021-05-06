@@ -136,3 +136,21 @@ func RenderThing(msg string) vecty.HTMLOrComponent {
 		})
 	}
 }
+
+// @todo implement this
+//func TestHtmlToDst_SupportsEmbeddingMarkdownDirectly(t *testing.T) {
+//	htmlS := `<div markup="{someMap}"></div>`
+//	expr, err := htmlToDst(htmlS)
+//	require.NoError(t, err)
+//	requireEqStr(t, tWrapExpr(t, expr), `
+//package thing
+//
+//func RenderThing(msg string) vecty.HTMLOrComponent {
+//	elem.Div(
+//		vecty.Markup(
+//			someMap,
+//		),
+//		vecty.Text("stuff"),
+//	)
+//}`)
+//}

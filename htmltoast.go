@@ -1,15 +1,9 @@
 package tvecty
 
 import (
-	"fmt"
 	"github.com/dave/dst"
 	"github.com/mdev5000/tvecty/html"
-	"regexp"
 	"strings"
-)
-
-var (
-	stringExprRegex = regexp.MustCompile("^{(?:([a-z]):)?([^}]+)}$")
 )
 
 const (
@@ -46,6 +40,9 @@ func tagsToAst(existing []dst.Expr, tags []*html.TagOrText) ([]dst.Expr, error) 
 }
 
 func tagToAst(existing []dst.Expr, tag *html.TagOrText) ([]dst.Expr, error) {
+	// Tagname is empty if the tag is a text tag
+	// Ex. <div>{embed} and more</div>
+	// "{embed} and more" would be a text tag.
 	if tag.TagName == "" {
 		var err error
 		existing, err = parseExpressionWrappers(existing, tag.Text)
@@ -114,72 +111,4 @@ func tagNameToVectyElem(tagName string) (string, string) {
 	default:
 		return "elem", strings.ToUpper(tagName[0:1]) + tagName[1:]
 	}
-}
-
-// Parse an attribute value into a multiple arguments. Current this is done by split on space, but may change in the
-// future. Example the attribute value "cool stuff" would be created as a two separate arguments
-// (ex vecty.Class("cool", "stuff"))
-func parseMultipleAttributeValue(existing []dst.Expr, attrValue string) ([]dst.Expr, error) {
-	for _, p := range strings.Split(attrValue, " ") {
-		expr, err := parseExpressionWrapper(p)
-		if err != nil {
-			return existing, err
-		}
-		if expr == nil {
-			expr = stringLit(p)
-		}
-		existing = append(existing, expr)
-	}
-	return existing, nil
-}
-
-// Parse an attribute value into a single argument. Example the attribute value "cool stuff"
-// would be created as a single argument (ex vecty.Attr("first value", "cool stuff"))
-func parseSingleAttributeValue(existing []dst.Expr, attrValue string) ([]dst.Expr, error) {
-	expr, err := parseExpressionWrapper(attrValue)
-	if err != nil {
-		return existing, err
-	}
-	if expr == nil {
-		expr = stringLit(attrValue)
-	}
-	return append(existing, expr), nil
-}
-
-func parseExpressionWrappers(existing []dst.Expr, exprs string) ([]dst.Expr, error) {
-	parts := strings.Split(exprs, "\n")
-	for _, e := range parts {
-		expr, err := parseExpressionWrapper(strings.TrimSpace(e))
-		if err != nil {
-			return nil, err
-		}
-		if expr == nil {
-			return nil, fmt.Errorf("invalid expression: '%s'", e)
-		}
-		existing = append(existing, expr)
-	}
-	return existing, nil
-}
-
-func parseExpressionWrapper(s string) (dst.Expr, error) {
-	var expr dst.Expr
-	var err error
-	m := stringExprRegex.FindStringSubmatch(s)
-	if len(m) == 0 {
-		return nil, nil
-	}
-	expr, err = parseExpression(m[exprContentsIndex])
-	if err != nil {
-		return nil, err
-	}
-	if m[exprMacroIndex] != "" {
-		switch m[exprMacroIndex] {
-		case "s":
-			// wrap the contents in string, ex. {s:"some string"} -> vecty.Text("some string")
-			expr = simpleCallExpr("vecty", "Text", []dst.Expr{expr})
-		default:
-			return nil, fmt.Errorf("invalid expressions macro in statement: '%s'", s)
-		}
-	}
-	return expr, nil
 }
