@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	exprMacroIndex    = 1
+	exprModifierIndex = 1
 	exprContentsIndex = 2
 )
 

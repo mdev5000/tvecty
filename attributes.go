@@ -9,7 +9,8 @@ import (
 )
 
 var (
-	stringExprRegex = regexp.MustCompile("^{(?:([a-z]):)?([^}]+)}$")
+	stringExprRegex    = regexp.MustCompile("^{(?:([a-z]):)?([^}]+)}$")
+	embedModifierRegex = regexp.MustCompile("^([a-z]):(.+)")
 )
 
 type attributeToken struct {
@@ -61,29 +62,17 @@ func parseAttributeExpressionWrappers(existing []dst.Expr, exprs string) ([]dst.
 }
 
 func parseExpressionWrappers(existing []dst.Expr, exprs string) ([]dst.Expr, error) {
-	parts := strings.Split(exprs, "\n")
-	for _, e := range parts {
-		expr, err := parseExpressionWrapper(strings.TrimSpace(e))
-		if err != nil {
-			return nil, err
-		}
-		if expr == nil {
-			return nil, fmt.Errorf("invalid expression: '%s'", e)
-		}
-		existing = append(existing, expr)
+	parts, err := tokenizeParts(exprs)
+	if err != nil {
+		return existing, err
 	}
-	return existing, nil
-}
-
-func parseExpressionWrappers2(existing []dst.Expr, exprs string) ([]dst.Expr, error) {
-	parts := strings.Split(exprs, "\n")
 	for _, e := range parts {
-		expr, err := parseExpressionWrapper(strings.TrimSpace(e))
+		expr, err := parseExpressionWrapper2(e.value, e.isEmbeddedCode)
 		if err != nil {
-			return nil, err
+			return existing, err
 		}
 		if expr == nil {
-			return nil, fmt.Errorf("invalid expression: '%s'", e)
+			return existing, fmt.Errorf("invalid expression: '%s'", e.value)
 		}
 		existing = append(existing, expr)
 	}
@@ -143,6 +132,7 @@ func tryAppendAttributeToken(toks []attributeToken, a attributeToken, currentVal
 	return append(toks, a)
 }
 
+// @todo remove all references of this and replace is with parseExpressionWrapper2.
 func parseExpressionWrapper(s string) (dst.Expr, error) {
 	var expr dst.Expr
 	var err error
@@ -154,14 +144,55 @@ func parseExpressionWrapper(s string) (dst.Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	if m[exprMacroIndex] != "" {
-		switch m[exprMacroIndex] {
-		case "s":
+	if m[exprModifierIndex] != "" {
+		wrapInText, err := parseEmbedModifier(s, m[exprModifierIndex])
+		if err != nil {
+			return expr, err
+		}
+		if wrapInText {
 			// wrap the contents in string, ex. {s:"some string"} -> vecty.Text("some string")
 			expr = simpleCallExpr("vecty", "Text", []dst.Expr{expr})
-		default:
-			return nil, fmt.Errorf("invalid expressions macro in statement: '%s'", s)
 		}
 	}
 	return expr, nil
+}
+
+func parseExpressionWrapper2(s string, isEmbeddedCode bool) (dst.Expr, error) {
+	var expr dst.Expr
+	var err error
+	if !isEmbeddedCode {
+		return simpleCallExpr("vecty", "Text", []dst.Expr{stringLit(s)}), nil
+	}
+
+	wrapInText := false
+
+	// Parse expression modifiers, ex 's:' in '{s:myExpression}'
+	m := embedModifierRegex.FindStringSubmatch(s)
+	if len(m) > 0 {
+		wrapInText, err = parseEmbedModifier(s, m[1])
+		if err != nil {
+			return nil, err
+		}
+		// Remove the expression modifier from the expression
+		s = m[2]
+	}
+
+	expr, err = parseExpression(s)
+	if err != nil {
+		return nil, err
+	}
+	if wrapInText {
+		expr = simpleCallExpr("vecty", "Text", []dst.Expr{expr})
+	}
+	return expr, nil
+}
+
+func parseEmbedModifier(fullExpression, m string) (wrapInText bool, err error) {
+	switch m {
+	case "s":
+		// wrap the contents in string, ex. {s:"some string"} -> vecty.Text("some string")
+		return true, nil
+	default:
+		return false, fmt.Errorf("invalid expression modifier '%s' in expression: '%s'", m, fullExpression)
+	}
 }
