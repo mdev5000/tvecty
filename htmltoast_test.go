@@ -186,24 +186,28 @@ func RenderThing(msg string) vecty.HTMLOrComponent {
 		firstValue,
 		vecty.Text("more text"),
 		vecty.Text("and some here"),
-		secondValue, thirdValue, fourthValue)
+		secondValue,
+		thirdValue,
+		fourthValue,
+	)
 }`)
 }
 
-// @todo implement this
-//func TestHtmlToDst_SupportsEmbeddingMarkdownDirectly(t *testing.T) {
-//	htmlS := `<div markup="{someMap}"></div>`
-//	expr, err := htmlToDst(htmlS)
-//	require.NoError(t, err)
-//	requireEqStr(t, tWrapExpr(t, expr), `
-//package thing
-//
-//func RenderThing(msg string) vecty.HTMLOrComponent {
-//	elem.Div(
-//		vecty.Markup(
-//			someMap,
-//		),
-//		vecty.Text("stuff"),
-//	)
-//}`)
-//}
+func TestHtmlToDst_SupportsEmbeddingMarkdownDirectly(t *testing.T) {
+	htmlS := `<div markup="{someMap} {anotherMap}" class="first">text</div>`
+	expr, err := htmlToDst(htmlS)
+	require.NoError(t, err)
+	requireEqStr(t, tWrapExpr(t, expr), `
+package thing
+
+func RenderThing(msg string) vecty.HTMLOrComponent {
+	elem.Div(
+		vecty.Markup(
+			someMap,
+			anotherMap,
+			vecty.Class("first"),
+		),
+		vecty.Text("text"),
+	)
+}`)
+}

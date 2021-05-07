@@ -19,14 +19,14 @@ type embedToken struct {
 
 // Parse an text within a tag. Unlike attribute parsing body text must be wrapped in vecty.Text()
 func parseTagTextValue(existing []dst.Expr, bodyValue string) ([]dst.Expr, error) {
-	return parseExpressions(existing, bodyValue, true)
+	return parseExpressions(existing, bodyValue, true, true)
 }
 
 // Parse an attribute value into a multiple arguments. Current this is done by split on space, but may change in the
 // future. Example the attribute value "cool stuff" would be created as a two separate arguments
 // (ex vecty.Class("cool", "stuff"))
-func parseMultipleAttributeValue(existing []dst.Expr, attrValue string) ([]dst.Expr, error) {
-	return parseExpressions(existing, attrValue, false)
+func parseMultipleAttributeValue(existing []dst.Expr, attrValue string, addNewLines bool) ([]dst.Expr, error) {
+	return parseExpressions(existing, attrValue, false, addNewLines)
 }
 
 // Parse an attribute value into a single argument. Example the attribute value "cool stuff"
@@ -42,20 +42,20 @@ func parseSingleAttributeValue(existing []dst.Expr, attrValue string) ([]dst.Exp
 		return nil, fmt.Errorf("only single expression is allowed, but was '%s' (must be either a single expression or a strng)", attrValue)
 	}
 	p := parts[0]
-	expr, err := parseExpressionOrText(p.value, p.isEmbeddedCode, false)
+	expr, err := parseExpressionOrText(p.value, p.isEmbeddedCode, false, false)
 	if err != nil {
 		return existing, err
 	}
 	return append(existing, expr), nil
 }
 
-func parseExpressions(existing []dst.Expr, exprs string, wrapText bool) ([]dst.Expr, error) {
+func parseExpressions(existing []dst.Expr, exprs string, wrapText, addNewLines bool) ([]dst.Expr, error) {
 	parts, err := tokenizeExpressionParts(exprs)
 	if err != nil {
 		return existing, err
 	}
 	for _, e := range parts {
-		expr, err := parseExpressionOrText(e.value, e.isEmbeddedCode, wrapText)
+		expr, err := parseExpressionOrText(e.value, e.isEmbeddedCode, wrapText, addNewLines)
 		if err != nil {
 			return existing, err
 		}
@@ -69,7 +69,7 @@ func parseExpressions(existing []dst.Expr, exprs string, wrapText bool) ([]dst.E
 
 // Convert a string into the correct dst.Expr for use in vecty. Variable wrapText determines if a non-embedded code
 // value should be wrapped with vecty.Text(), if not a plain string literal is used instead.
-func parseExpressionOrText(s string, isEmbeddedCode, wrapText bool) (dst.Expr, error) {
+func parseExpressionOrText(s string, isEmbeddedCode, wrapText, addNewLines bool) (dst.Expr, error) {
 	var expr dst.Expr
 	var err error
 	if !isEmbeddedCode {
@@ -93,11 +93,14 @@ func parseExpressionOrText(s string, isEmbeddedCode, wrapText bool) (dst.Expr, e
 		s = m[2]
 	}
 
-	expr, err = parseExpression(s)
+	expr, err = parseExpression(s, addNewLines)
 	if err != nil {
 		return nil, err
 	}
 	if wrapCodeInText {
+		// Remove extra space so it fits nicely on one line.
+		expr.Decorations().Before = dst.SpaceType(0)
+		expr.Decorations().After = dst.SpaceType(0)
 		expr = simpleCallExpr("vecty", "Text", []dst.Expr{expr})
 	}
 	return expr, nil

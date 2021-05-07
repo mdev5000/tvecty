@@ -50,7 +50,7 @@ func TestTokenizeExpressionParts_ErrorWhenRandomClosingExpressions(t *testing.T)
 }
 
 func TestParseExpressionOrText_CanParseExpressions(t *testing.T) {
-	expr, err := parseExpressionOrText("first", true, true)
+	expr, err := parseExpressionOrText("first", true, true, false)
 	require.NoError(t, err)
 	requireEqStr(t, tWrapExpr(t, expr), `
 package thing
@@ -61,7 +61,7 @@ func RenderThing(msg string) vecty.HTMLOrComponent {
 }
 
 func TestParseExpressionOrText_CanParseExpressionsWithStringModifiers(t *testing.T) {
-	expr, err := parseExpressionOrText("s:wrapped", true, true)
+	expr, err := parseExpressionOrText("s:wrapped", true, true, false)
 	require.NoError(t, err)
 	requireEqStr(t, tWrapExpr(t, expr), `
 package thing
@@ -72,7 +72,7 @@ func RenderThing(msg string) vecty.HTMLOrComponent {
 }
 
 func TestParseExpressionOrText_CanParseStrings(t *testing.T) {
-	expr, err := parseExpressionOrText("some string", false, true)
+	expr, err := parseExpressionOrText("some string", false, true, false)
 	require.NoError(t, err)
 	requireEqStr(t, tWrapExpr(t, expr), `
 package thing
@@ -83,7 +83,7 @@ func RenderThing(msg string) vecty.HTMLOrComponent {
 }
 
 func TestParseExpressionOrText_CanParseNonWrappedStrings(t *testing.T) {
-	expr, err := parseExpressionOrText("some string", false, false)
+	expr, err := parseExpressionOrText("some string", false, false, false)
 	require.NoError(t, err)
 	requireEqStr(t, tWrapExpr(t, expr), `
 package thing

@@ -156,27 +156,35 @@ func parseTagAttributes(existing []dst.Expr, tag *html.TagOrText) ([]dst.Expr, e
 	if len(tag.Attr) == 0 {
 		return existing, nil
 	}
-	markupArgs := make([]dst.Expr, len(tag.Attr))
-	for i, attr := range tag.Attr {
+	markupArgs := make([]dst.Expr, 0, len(tag.Attr))
+	for _, attr := range tag.Attr {
 		switch attr.Name {
+		case "markup":
+			attrExpr, err := parseMultipleAttributeValue(nil, attr.Value, true)
+			if err != nil {
+				return existing, err
+			}
+			for _, a := range attrExpr {
+				markupArgs = append(markupArgs, a)
+			}
 		case "class":
-			attrExpr, err := parseMultipleAttributeValue(nil, attr.Value)
+			attrExpr, err := parseMultipleAttributeValue(nil, attr.Value, false)
 			if err != nil {
 				return existing, err
 			}
-			markupArgs[i] = simpleCallExpr("vecty", "Class", attrExpr)
+			markupArgs = append(markupArgs, simpleCallExpr("vecty", "Class", attrExpr))
 		case "click":
-			expr, err := parseExpression(attr.Value)
+			expr, err := parseExpression(attr.Value, false)
 			if err != nil {
 				return existing, err
 			}
-			markupArgs[i] = simpleCallExpr("event", "Click", []dst.Expr{expr})
+			markupArgs = append(markupArgs, simpleCallExpr("event", "Click", []dst.Expr{expr}))
 		default:
 			attrExpr, err := parseSingleAttributeValue([]dst.Expr{stringLit(attr.Name)}, attr.Value)
 			if err != nil {
 				return existing, err
 			}
-			markupArgs[i] = simpleCallExpr("vecty", "Attribute", attrExpr)
+			markupArgs = append(markupArgs, simpleCallExpr("vecty", "Attribute", attrExpr))
 		}
 	}
 	return append(existing, simpleCallExpr("vecty", "Markup", markupArgs)), nil

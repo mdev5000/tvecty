@@ -57,7 +57,7 @@ func simpleCallExpr(x, sel string, args []dst.Expr) *dst.CallExpr {
 	}
 }
 
-func parseExpression(exprStr string) (dst.Expr, error) {
+func parseExpression(exprStr string, addNewLines bool) (dst.Expr, error) {
 	// Basically cheat and make a mini go file for dst to parse.
 	v, err := decorator.Parse(fmt.Sprintf("package tmp; var e = %s", exprStr))
 	if err != nil {
@@ -71,5 +71,14 @@ func parseExpression(exprStr string) (dst.Expr, error) {
 	if !ok {
 		panic("failed to convert ValueSpec")
 	}
-	return vs.Values[0], nil
+	expr := vs.Values[0]
+	if addNewLines {
+		//spew.Dump(expr)
+		switch expr.(type) {
+		case *dst.Ident:
+			expr.Decorations().Before = dst.SpaceType(1)
+			expr.Decorations().After = dst.SpaceType(1)
+		}
+	}
+	return expr, nil
 }
