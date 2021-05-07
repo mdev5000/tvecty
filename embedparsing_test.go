@@ -5,14 +5,14 @@ import (
 	"testing"
 )
 
-func TestTokenizeParts_CorrectlyTokenizesParts(t *testing.T) {
-	parts, err := tokenizeParts(`{first} Second value {third}
+func TestTokenizeExpressionParts_CorrectlyTokenizesParts(t *testing.T) {
+	parts, err := tokenizeExpressionParts(`{first} Second value {third}
 And some more {fourth} stuff
 And another thing of text
 {fifth}
 `)
 	require.NoError(t, err)
-	require.Equal(t, parts, []attributeToken{
+	require.Equal(t, parts, []embedToken{
 		{"first", true},
 		{"Second value", false},
 		{"third", true},
@@ -24,33 +24,33 @@ And another thing of text
 	})
 }
 
-func TestTokenizeParts_CanTokenizeEmptyValue(t *testing.T) {
-	parts, err := tokenizeParts("")
+func TestTokenizeExpressionParts_CanTokenizeEmptyValue(t *testing.T) {
+	parts, err := tokenizeExpressionParts("")
 	require.NoError(t, err)
-	require.Equal(t, parts, []attributeToken{
+	require.Equal(t, parts, []embedToken{
 		{"", false},
 	})
 }
 
-func TestTokenizeParts_NewLineIsIllegalInExpressions(t *testing.T) {
-	_, err := tokenizeParts(`{first
+func TestTokenizeExpressionParts_NewLineIsIllegalInExpressions(t *testing.T) {
+	_, err := tokenizeExpressionParts(`{first
 }
 `)
 	require.EqualError(t, err, "illegal character '\\n' in embedded code block in expressions '{first\n}\n'")
 }
 
-func TestTokenizeParts_ErrorWhenUnclosedExpressions(t *testing.T) {
-	_, err := tokenizeParts(`{first`)
+func TestTokenizeExpressionParts_ErrorWhenUnclosedExpressions(t *testing.T) {
+	_, err := tokenizeExpressionParts(`{first`)
 	require.EqualError(t, err, "missing closing '}' tag for embedded code in '{first'")
 }
 
-func TestTokenizeParts_ErrorWhenRandomClosingExpressions(t *testing.T) {
-	_, err := tokenizeParts(`stuff}`)
+func TestTokenizeExpressionParts_ErrorWhenRandomClosingExpressions(t *testing.T) {
+	_, err := tokenizeExpressionParts(`stuff}`)
 	require.EqualError(t, err, "unexpected '}' in expressions 'stuff}'")
 }
 
-func TestParseExpressionWrapper2_CanParseExpressions(t *testing.T) {
-	expr, err := parseExpressionWrapper("first", true, true)
+func TestParseExpressionOrText_CanParseExpressions(t *testing.T) {
+	expr, err := parseExpressionOrText("first", true, true)
 	require.NoError(t, err)
 	requireEqStr(t, tWrapExpr(t, expr), `
 package thing
@@ -60,8 +60,8 @@ func RenderThing(msg string) vecty.HTMLOrComponent {
 }`)
 }
 
-func TestParseExpressionWrapper2_CanParseExpressionsWithStringModifiers(t *testing.T) {
-	expr, err := parseExpressionWrapper("s:wrapped", true, true)
+func TestParseExpressionOrText_CanParseExpressionsWithStringModifiers(t *testing.T) {
+	expr, err := parseExpressionOrText("s:wrapped", true, true)
 	require.NoError(t, err)
 	requireEqStr(t, tWrapExpr(t, expr), `
 package thing
@@ -71,8 +71,8 @@ func RenderThing(msg string) vecty.HTMLOrComponent {
 }`)
 }
 
-func TestParseExpressionWrapper2_CanParseStrings(t *testing.T) {
-	expr, err := parseExpressionWrapper("some string", false, true)
+func TestParseExpressionOrText_CanParseStrings(t *testing.T) {
+	expr, err := parseExpressionOrText("some string", false, true)
 	require.NoError(t, err)
 	requireEqStr(t, tWrapExpr(t, expr), `
 package thing
@@ -82,8 +82,8 @@ func RenderThing(msg string) vecty.HTMLOrComponent {
 }`)
 }
 
-func TestParseExpressionWrapper2_CanParseNonWrappedStrings(t *testing.T) {
-	expr, err := parseExpressionWrapper("some string", false, false)
+func TestParseExpressionOrText_CanParseNonWrappedStrings(t *testing.T) {
+	expr, err := parseExpressionOrText("some string", false, false)
 	require.NoError(t, err)
 	requireEqStr(t, tWrapExpr(t, expr), `
 package thing

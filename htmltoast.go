@@ -126,7 +126,7 @@ func tagToAst(existing []dst.Expr, tag *html.TagOrText) ([]dst.Expr, error) {
 	// "{embed} and more" would be a text tag.
 	if tag.TagName == "" {
 		var err error
-		existing, err = parseExpressionWrappers(existing, tag.Text)
+		existing, err = parseTagTextValue(existing, tag.Text)
 		if err != nil {
 			return nil, err
 		}
