@@ -26,7 +26,34 @@ func parseTagTextValue(existing []dst.Expr, bodyValue string) ([]dst.Expr, error
 // future. Example the attribute value "cool stuff" would be created as a two separate arguments
 // (ex vecty.Class("cool", "stuff"))
 func parseMultipleAttributeValue(existing []dst.Expr, attrValue string, addNewLines bool) ([]dst.Expr, error) {
-	return parseExpressions(existing, attrValue, false, addNewLines)
+	parts, err := tokenizeExpressionParts(attrValue)
+	if err != nil {
+		return existing, err
+	}
+	for _, e := range parts {
+		if !e.isEmbeddedCode {
+			for _, s := range strings.Split(e.value, " ") {
+				expr, err := parseExpressionOrText(s, false, false, addNewLines)
+				if err != nil {
+					return existing, err
+				}
+				if expr == nil {
+					return existing, fmt.Errorf("invalid expression: '%s'", e.value)
+				}
+				existing = append(existing, expr)
+			}
+		} else {
+			expr, err := parseExpressionOrText(e.value, true, false, addNewLines)
+			if err != nil {
+				return existing, err
+			}
+			if expr == nil {
+				return existing, fmt.Errorf("invalid expression: '%s'", e.value)
+			}
+			existing = append(existing, expr)
+		}
+	}
+	return existing, nil
 }
 
 // Parse an attribute value into a single argument. Example the attribute value "cool stuff"

@@ -211,3 +211,20 @@ func RenderThing(msg string) vecty.HTMLOrComponent {
 	)
 }`)
 }
+
+func TestHtmlToDst_ParsesClassesSeparately(t *testing.T) {
+	htmlS := `<div class="first second {third} fourth">text</div>`
+	expr, err := htmlToDst(htmlS)
+	require.NoError(t, err)
+	requireEqStr(t, tWrapExpr(t, expr), `
+package thing
+
+func RenderThing(msg string) vecty.HTMLOrComponent {
+	elem.Div(
+		vecty.Markup(
+			vecty.Class("first", "second", third, "fourth"),
+		),
+		vecty.Text("text"),
+	)
+}`)
+}
