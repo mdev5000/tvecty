@@ -137,6 +137,23 @@ func RenderThing(msg string) vecty.HTMLOrComponent {
 	}
 }
 
+func TestHTmlToDst_UsesVectyTagWhenVectyDoesNotSupportTheTag(t *testing.T) {
+	htmlS := `<customtag class="someclass">{s:"text"}</customtag>`
+	expr, err := htmlToDst(htmlS)
+	require.NoError(t, err)
+	requireEqStr(t, tWrapExpr(t, expr), `
+package thing
+
+func RenderThing(msg string) vecty.HTMLOrComponent {
+	vecty.Tag("customtag",
+		vecty.Markup(
+			vecty.Class("someclass"),
+		),
+		vecty.Text("text"),
+	)
+}`)
+}
+
 // @todo implement this
 //func TestHtmlToDst_SupportsEmbeddingMarkdownDirectly(t *testing.T) {
 //	htmlS := `<div markup="{someMap}"></div>`

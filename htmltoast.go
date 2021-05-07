@@ -11,6 +11,87 @@ const (
 	exprContentsIndex = 2
 )
 
+var tagTranslations map[string]string
+
+func init() {
+	// Setup the common tag translations for the vecty function equivalents.
+	//
+	// The following tags have no been added (for now):
+	// Description
+	// Details
+	// InsertedText
+
+	tagTranslations = map[string]string{
+		"a":          "Anchor",
+		"abbr":       "Abbreviation",
+		"blockquote": "BlockQuote",
+		"br":         "Break",
+		"cite":       "Citation",
+		"col":        "Column",
+		"colgroup":   "ColumnGroup",
+		"dfn":        "Definition",
+		"datalist":   "DataList",
+		"del":        "DeletedText",
+		"dl":         "DescriptionList",
+		"dt":         "DefinitionTerm",
+		"em":         "Emphasis",
+		"fieldset":   "FieldSet",
+		"figcaption": "FigureCaption",
+		"h1":         "Heading1",
+		"h2":         "Heading2",
+		"h3":         "Heading3",
+		"h4":         "Heading4",
+		"h5":         "Heading5",
+		"h6":         "Heading6",
+		"hgroup":     "HeadingsGroup",
+		"hr":         "HorizontalRule",
+		"i":          "Italic",
+		"iframe":     "InlineFrame",
+		"img":        "Image",
+		"kbd":        "KeyboardInput",
+		"li":         "ListItem",
+		"nav":        "Navigation",
+		"optgroup":   "OptionsGroups",
+		"ol":         "OrderedList",
+		"p":          "Paragraph",
+		"param":      "Parameter",
+		"pre":        "Preformatted",
+		"rp":         "RubyParenthesis",
+		"rt":         "RubyText",
+		"rtc":        "RubyTextContainer",
+		"samp":       "Sample",
+		"strike":     "Strikethrough",
+		"sub":        "Subscript",
+		"sup":        "Superscript",
+		"tbody":      "TableBody",
+		"tdata":      "TableData",
+		"tfoot":      "TableFoot",
+		"thead":      "TableHead",
+		"th":         "TableHeader",
+		"tr":         "TableRow",
+		"u":          "Underline",
+		"ul":         "UnorderedList",
+		"var":        "Variable",
+		"wbr":        "WordBreakOpportunity",
+	}
+
+	toUpperCaseTags := []string{
+		"address", "area", "article", "aside", "audio",
+		"bold", "button", "body",
+		"canvas", "caption", "code",
+		"data", "details", "dialog", "div",
+		"embed", "figure", "footer", "form", "header", "image", "input",
+		"label", "legend", "link", "main", "map", "mark", "menu", "meter",
+		"noscript", "object", "option", "output", "picture", "progress",
+		"quote", "ruby",
+		"script", "section", "select", "slot", "small", "source", "span", "strong", "style", "summary",
+		"table", "template", "textarea", "time", "title", "track", "video",
+	}
+	for _, tagName := range toUpperCaseTags {
+		tagTranslations[tagName] = strings.ToUpper(tagName[0:1]) + tagName[1:]
+	}
+}
+
 func htmlToDst(htmlRaw string) (dst.Expr, error) {
 	rootTag, err := html.ParseHtmlString(htmlRaw)
 	if err != nil {
@@ -50,8 +131,15 @@ func tagToAst(existing []dst.Expr, tag *html.TagOrText) ([]dst.Expr, error) {
 			return nil, err
 		}
 	} else {
-		vectyPkg, vectyFn := tagNameToVectyElem(tag.TagName)
-		args, err := parseTagAttributes(nil, tag)
+		tagExists, vectyPkg, vectyFn := tagNameToVectyElem(tag.TagName)
+		var args []dst.Expr
+		var err error
+		if !tagExists {
+			args = append(args, stringLit(tag.TagName))
+			vectyPkg = "vecty"
+			vectyFn = "Tag"
+		}
+		args, err = parseTagAttributes(args, tag)
 		if err != nil {
 			return nil, err
 		}
@@ -94,21 +182,7 @@ func parseTagAttributes(existing []dst.Expr, tag *html.TagOrText) ([]dst.Expr, e
 	return append(existing, simpleCallExpr("vecty", "Markup", markupArgs)), nil
 }
 
-func tagNameToVectyElem(tagName string) (string, string) {
-	switch tagName {
-	case "a":
-		return "elem", "Anchor"
-	case "img":
-		return "elem", "Image"
-	case "nav":
-		return "elem", "Navigation"
-	case "hr":
-		return "elem", "HorizontalRule"
-	case "h1", "h2", "h3", "h4", "h5", "h6":
-		return "elem", "Heading" + tagName[1:]
-	case "cite":
-		return "elem", "Citation"
-	default:
-		return "elem", strings.ToUpper(tagName[0:1]) + tagName[1:]
-	}
+func tagNameToVectyElem(tagName string) (bool, string, string) {
+	vectyName, found := tagTranslations[tagName]
+	return found, "elem", vectyName
 }
