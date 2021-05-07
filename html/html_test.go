@@ -100,3 +100,20 @@ some stuff after
 	require.NoError(t, err)
 	require.Equal(t, "\n\nsome stuff after\n", string(remaining))
 }
+
+func TestDoesNothingWhenTheresNoHtml(t *testing.T) {
+	src := `< 5
+}
+
+func Another() {
+}
+`
+	r := bytes.NewReader([]byte(src))
+	tag, htmlSrc, err := ParseHtml(r)
+	require.NoError(t, err)
+	require.Nil(t, tag)
+	require.Nil(t, htmlSrc)
+	remaining, err := io.ReadAll(r)
+	require.NoError(t, err)
+	require.Equal(t, "< 5\n}\n\nfunc Another() {\n}\n", string(remaining))
+}

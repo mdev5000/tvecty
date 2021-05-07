@@ -39,10 +39,17 @@ func ParseHtml(r *bytes.Reader) (tag *TagOrText, htmlSrc []byte, err error) {
 				return lastPop, nil, err
 			}
 		case html.TextToken:
-			txt := string(z.Text())
+			// @todo Possibly consider a better way to do this, especially for something like '2 < 3' early in a program, where essentially the entire program has to be converted into a string :(
+			txtb := z.Text()
+			txt := string(txtb)
 			txtT := strings.TrimSpace(txt)
 			if txtT == "" {
 				continue
+			}
+			// No html has been parsed, so everything in text should be returned to the reader.
+			if lastPop == nil && stack.isEmpty() {
+				r.Reset(txtb)
+				return nil, nil, nil
 			}
 			tag := &TagOrText{Text: txtT}
 			if err := stack.pushChild(tag); err != nil {

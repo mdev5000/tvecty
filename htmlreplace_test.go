@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestPlacesHtmlInAVectyWrapper(t *testing.T) {
+func TestSourceHtmlReplace_PlacesHtmlInAVectyWrapper(t *testing.T) {
 	in := `package somepackage
 
 func MyRender() vecty.HTMLOrComponent {
@@ -38,7 +38,7 @@ func MyRender() vecty.HTMLOrComponent {
 `, ":tick:", "`", -1))
 }
 
-func TestCorrectlyExtractsHtmlTagInformation(t *testing.T) {
+func TestSourceHtmlReplace_CorrectlyExtractsHtmlTagInformation(t *testing.T) {
 	in := `package somepackage
 
 func MyRender() vecty.HTMLOrComponent {
@@ -60,4 +60,91 @@ div
   span 
     Content
 `, tracker[0].DebugString())
+}
+
+func TestSourceHtmlReplace_IgnoresHtmlInLineComments(t *testing.T) {
+	in := `package somepackage
+
+// <div>test
+func MyRender() int {
+	// <div>another
+	return 10 / 2
+}
+
+//</div>
+`
+	src := bytes.NewReader([]byte(in))
+	srcOut := bytes.NewBuffer(nil)
+	_, err := sourceHtmlReplace(newHtmlTracker(), srcOut, src)
+	require.NoError(t, err)
+	requireEqStr(t, srcOut.String(), `
+package somepackage
+
+// <div>test
+func MyRender() int {
+	// <div>another
+	return 10 / 2
+}
+
+//</div>
+`)
+}
+
+func TestSourceHtmlReplace_IgnoreHtmlInMultilineComments(t *testing.T) {
+	in := `package somepackage
+
+/**
+ * <div>here
+ **/
+func MyRender(t *Thing) int {
+	/* <span>single */
+	return t.First / 2
+}
+/*
+ <div>another
+*/
+`
+	src := bytes.NewReader([]byte(in))
+	srcOut := bytes.NewBuffer(nil)
+	_, err := sourceHtmlReplace(newHtmlTracker(), srcOut, src)
+	require.NoError(t, err)
+	requireEqStr(t, srcOut.String(), `
+package somepackage
+
+/**
+ * <div>here
+ **/
+func MyRender(t *Thing) int {
+	/* <span>single */
+	return t.First / 2
+}
+/*
+ <div>another
+*/
+`)
+}
+
+func TestSourceHtmlReplace_IgnoreLessThanSymbol(t *testing.T) {
+	in := `package somepackage
+
+func MyRender() int {
+	if 2 < 3 {
+		return 10 << 2
+	}
+	return 0
+}
+`
+	src := bytes.NewReader([]byte(in))
+	srcOut := bytes.NewBuffer(nil)
+	_, err := sourceHtmlReplace(newHtmlTracker(), srcOut, src)
+	require.NoError(t, err)
+	requireEqStr(t, srcOut.String(), `
+package somepackage
+
+func MyRender() int {
+	if 2 < 3 {
+		return 10 << 2
+	}
+	return 0
+}`)
 }

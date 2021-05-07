@@ -24,6 +24,10 @@ func (s *tagStack) pop() (*TagOrText, error) {
 	return tag, nil
 }
 
+func (s *tagStack) isEmpty() bool {
+	return s.Next == nil
+}
+
 func (s *tagStack) pushChild(tag *TagOrText) error {
 	s.Next.Tag.AppendChild(tag)
 	return nil
