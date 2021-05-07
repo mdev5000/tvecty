@@ -42,7 +42,7 @@ func RenderThing(msg string) vecty.HTMLOrComponent {
 	return b.String()
 }
 
-func TestCanParseHtmlToAst1(t *testing.T) {
+func TestHTmlToDst_CanParseHtmlToAst1(t *testing.T) {
 	htmlS := `<div>
 	{s:msg}
 	{something()}
@@ -59,7 +59,7 @@ func RenderThing(msg string) vecty.HTMLOrComponent {
 }`)
 }
 
-func TestParsesAndInsertsMultivalueAttributesAttributes(t *testing.T) {
+func TestHTmlToDst_ParsesAndInsertsMultivalueAttributesAttributes(t *testing.T) {
 	htmlS := `<div class="some-class {myvar}">{s:"stuff"}</div>`
 	expr, err := htmlToDst(htmlS)
 	require.NoError(t, err)
@@ -76,7 +76,7 @@ func RenderThing(msg string) vecty.HTMLOrComponent {
 }`)
 }
 
-func TestParsesCustomAttributesAsSingleValue(t *testing.T) {
+func TestHTmlToDst_ParsesCustomAttributesAsSingleValue(t *testing.T) {
 	htmlS := `<div data-ducks="this is all one argument">{s:"stuff"}</div>`
 	expr, err := htmlToDst(htmlS)
 	require.NoError(t, err)
@@ -93,7 +93,7 @@ func RenderThing(msg string) vecty.HTMLOrComponent {
 }`)
 }
 
-func TestConvertsTagsWithSpecialNames(t *testing.T) {
+func TestHTmlToDst_ConvertsTagsWithSpecialNames(t *testing.T) {
 	special := []struct {
 		Tag string
 		Out string

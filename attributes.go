@@ -9,7 +9,6 @@ import (
 )
 
 var (
-	stringExprRegex    = regexp.MustCompile("^{(?:([a-z]):)?([^}]+)}$")
 	embedModifierRegex = regexp.MustCompile("^([a-z]):(.+)")
 )
 
@@ -23,7 +22,7 @@ type attributeToken struct {
 // (ex vecty.Class("cool", "stuff"))
 func parseMultipleAttributeValue(existing []dst.Expr, attrValue string) ([]dst.Expr, error) {
 	for _, p := range strings.Split(attrValue, " ") {
-		expr, err := parseExpressionWrapper(p)
+		expr, err := parseSingleValueExpression(p)
 		if err != nil {
 			return existing, err
 		}
@@ -38,25 +37,12 @@ func parseMultipleAttributeValue(existing []dst.Expr, attrValue string) ([]dst.E
 // Parse an attribute value into a single argument. Example the attribute value "cool stuff"
 // would be created as a single argument (ex vecty.Attr("first value", "cool stuff"))
 func parseSingleAttributeValue(existing []dst.Expr, attrValue string) ([]dst.Expr, error) {
-	expr, err := parseExpressionWrapper(attrValue)
+	expr, err := parseSingleValueExpression(attrValue)
 	if err != nil {
 		return existing, err
 	}
 	if expr == nil {
 		expr = stringLit(attrValue)
-	}
-	return append(existing, expr), nil
-}
-
-// Similar to parseExpressionWrappers, but { and } are not required and are only used to split
-// up multiple statements.
-func parseAttributeExpressionWrappers(existing []dst.Expr, exprs string) ([]dst.Expr, error) {
-	if strings.Contains(exprs, "{") {
-		return parseExpressionWrappers(existing, exprs)
-	}
-	expr, err := parseExpression(exprs)
-	if err != nil {
-		return existing, err
 	}
 	return append(existing, expr), nil
 }
@@ -67,7 +53,7 @@ func parseExpressionWrappers(existing []dst.Expr, exprs string) ([]dst.Expr, err
 		return existing, err
 	}
 	for _, e := range parts {
-		expr, err := parseExpressionWrapper2(e.value, e.isEmbeddedCode)
+		expr, err := parseExpressionWrapper(e.value, e.isEmbeddedCode, true)
 		if err != nil {
 			return existing, err
 		}
@@ -79,11 +65,16 @@ func parseExpressionWrappers(existing []dst.Expr, exprs string) ([]dst.Expr, err
 	return existing, nil
 }
 
-func tokenizeParts(exprs string) ([]attributeToken, error) {
-	var out []attributeToken
+func tokenizeParts(exprs string) (out []attributeToken, err error) {
 	r := strings.NewReader(exprs)
 	currentToken := attributeToken{}
 	currentValue := strings.Builder{}
+	defer func() {
+		if err == nil && out == nil {
+			// If exprs if empty, they needs to exist at least one value, in this case an empty string literal.
+			out = []attributeToken{{value: "", isEmbeddedCode: false}}
+		}
+	}()
 	for {
 		c, _, err := r.ReadRune()
 		if err == io.EOF {
@@ -106,7 +97,7 @@ func tokenizeParts(exprs string) ([]attributeToken, error) {
 			currentValue = strings.Builder{}
 		case '}':
 			if !currentToken.isEmbeddedCode {
-				return nil, fmt.Errorf("unexpect '}' in expressions '%s'", exprs)
+				return nil, fmt.Errorf("unexpected '}' in expressions '%s'", exprs)
 			}
 			out = tryAppendAttributeToken(out, currentToken, currentValue.String())
 			currentToken = attributeToken{}
@@ -132,44 +123,37 @@ func tryAppendAttributeToken(toks []attributeToken, a attributeToken, currentVal
 	return append(toks, a)
 }
 
-// @todo remove all references of this and replace is with parseExpressionWrapper2.
-func parseExpressionWrapper(s string) (dst.Expr, error) {
-	var expr dst.Expr
-	var err error
-	m := stringExprRegex.FindStringSubmatch(s)
-	if len(m) == 0 {
-		return nil, nil
-	}
-	expr, err = parseExpression(m[exprContentsIndex])
+func parseSingleValueExpression(s string) (dst.Expr, error) {
+	parts, err := tokenizeParts(s)
 	if err != nil {
 		return nil, err
 	}
-	if m[exprModifierIndex] != "" {
-		wrapInText, err := parseEmbedModifier(s, m[exprModifierIndex])
-		if err != nil {
-			return expr, err
-		}
-		if wrapInText {
-			// wrap the contents in string, ex. {s:"some string"} -> vecty.Text("some string")
-			expr = simpleCallExpr("vecty", "Text", []dst.Expr{expr})
-		}
+	if len(parts) > 1 {
+		return nil, fmt.Errorf("only single expression is allowed, but was '%s' (must be either a single expression or a strng)", s)
 	}
-	return expr, nil
+	p := parts[0]
+	return parseExpressionWrapper(p.value, p.isEmbeddedCode, false)
 }
 
-func parseExpressionWrapper2(s string, isEmbeddedCode bool) (dst.Expr, error) {
+// Convert a string into the correct dst.Expr for use in vecty. Variable wrapText determines if a non-embedded code
+// value should be wrapped with vecty.Text(), if not a plain string literal is used instead.
+func parseExpressionWrapper(s string, isEmbeddedCode, wrapText bool) (dst.Expr, error) {
 	var expr dst.Expr
 	var err error
 	if !isEmbeddedCode {
-		return simpleCallExpr("vecty", "Text", []dst.Expr{stringLit(s)}), nil
+		if wrapText {
+			return simpleCallExpr("vecty", "Text", []dst.Expr{stringLit(s)}), nil
+		} else {
+			return stringLit(s), err
+		}
 	}
 
-	wrapInText := false
+	wrapCodeInText := false
 
 	// Parse expression modifiers, ex 's:' in '{s:myExpression}'
 	m := embedModifierRegex.FindStringSubmatch(s)
 	if len(m) > 0 {
-		wrapInText, err = parseEmbedModifier(s, m[1])
+		wrapCodeInText, err = parseEmbedModifier(s, m[1])
 		if err != nil {
 			return nil, err
 		}
@@ -181,7 +165,7 @@ func parseExpressionWrapper2(s string, isEmbeddedCode bool) (dst.Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	if wrapInText {
+	if wrapCodeInText {
 		expr = simpleCallExpr("vecty", "Text", []dst.Expr{expr})
 	}
 	return expr, nil

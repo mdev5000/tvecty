@@ -5,6 +5,9 @@ local: FORCE
 test: FORCE
 	go test ./...
 
+testr: FORCE
+	go test -race ./...
+
 fmt: FORCE
 	go fmt ./...
 
