@@ -57,7 +57,7 @@ func cmdCompileDir() *cobra.Command {
 			}
 			filesToCompile, err := matchFiles(wd, fileGlob, "file-glob")
 			if err != nil {
-
+				return err
 			}
 			for _, f := range filesToCompile {
 				if err := compileFileToPath(f, f+outSuffix); err != nil {

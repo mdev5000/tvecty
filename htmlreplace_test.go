@@ -18,12 +18,10 @@ func MyRender() vecty.HTMLOrComponent {
 	</div>
 }
 `
-
-	tracker := newHtmlTracker()
 	src := bytes.NewReader([]byte(in))
 	srcOut := bytes.NewBuffer(nil)
 
-	tracker, err := sourceHtmlReplace(tracker, srcOut, src)
+	_, err := sourceHtmlReplace(newHtmlTracker(), srcOut, src)
 	require.NoError(t, err)
 	requireEqStr(t, srcOut.String(), strings.Replace(`
 package somepackage

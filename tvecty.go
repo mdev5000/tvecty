@@ -22,6 +22,9 @@ func ConvertToVecty(filename string, w io.Writer, src []byte) error {
 		return err
 	}
 	f, err := decorator.Parse(srcWithoutHtml)
+	if err != nil {
+		return err
+	}
 	if err := Replace(parsed, f); err != nil {
 		return err
 	}

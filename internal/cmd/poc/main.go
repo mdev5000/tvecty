@@ -8,14 +8,14 @@ import (
 	"strconv"
 )
 
-type filler struct {
-	line  int
-	ftype string
-	value string
-}
-
-func ignore(i interface{}) {
-}
+//type filler struct {
+//	line  int
+//	ftype string
+//	value string
+//}
+//
+//func ignore(i interface{}) {
+//}
 
 func stringLit(s string) *dst.BasicLit {
 	return &dst.BasicLit{

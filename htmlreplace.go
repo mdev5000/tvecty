@@ -6,21 +6,17 @@ import (
 	"fmt"
 	"github.com/mdev5000/tvecty/html"
 	"io"
-	"regexp"
 )
-
-var htmlLitmusRegex = regexp.MustCompile("^<[a-zA-Z]+")
 
 type htmlReplaceReader = bytes.Reader
 
 type htmlReplaceStateFn = func(w io.Writer) (bool, error)
 
 type htmlReplaceState struct {
-	ht           htmlTracker
-	htmlTagDepth int
-	prevStateFn  htmlReplaceStateFn
-	stateFn      htmlReplaceStateFn
-	r            *htmlReplaceReader
+	ht          htmlTracker
+	prevStateFn htmlReplaceStateFn
+	stateFn     htmlReplaceStateFn
+	r           *htmlReplaceReader
 }
 
 func sourceHtmlReplace(ht htmlTracker, w io.Writer, src *bytes.Reader) (htmlTracker, error) {

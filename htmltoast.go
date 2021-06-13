@@ -6,11 +6,6 @@ import (
 	"strings"
 )
 
-const (
-	exprModifierIndex = 1
-	exprContentsIndex = 2
-)
-
 var tagTranslations map[string]string
 
 func init() {
@@ -164,9 +159,7 @@ func parseTagAttributes(existing []dst.Expr, tag *html.TagOrText) ([]dst.Expr, e
 			if err != nil {
 				return existing, err
 			}
-			for _, a := range attrExpr {
-				markupArgs = append(markupArgs, a)
-			}
+			markupArgs = append(markupArgs, attrExpr...)
 		case "class":
 			attrExpr, err := parseMultipleAttributeValue(nil, attr.Value, false)
 			if err != nil {

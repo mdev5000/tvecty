@@ -15,21 +15,6 @@ func stringLit(s string) *dst.BasicLit {
 	}
 }
 
-func simpleSelectorExpr(x, sel string) *dst.SelectorExpr {
-	return &dst.SelectorExpr{
-		X:   dst.NewIdent(x),
-		Sel: dst.NewIdent(sel),
-		Decs: dst.SelectorExprDecorations{
-			NodeDecs: dst.NodeDecs{
-				Before: dst.SpaceType(1),
-				Start:  nil,
-				End:    nil,
-				After:  dst.SpaceType(1),
-			},
-		},
-	}
-}
-
 func simpleCallExpr(x, sel string, args []dst.Expr) *dst.CallExpr {
 	return &dst.CallExpr{
 		Decs: dst.CallExprDecorations{
