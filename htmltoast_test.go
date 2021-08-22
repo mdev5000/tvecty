@@ -2,6 +2,7 @@ package tvecty
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/dave/dst"
 	"github.com/dave/dst/decorator"
 	"github.com/stretchr/testify/require"
@@ -210,6 +211,47 @@ func RenderThing(msg string) vecty.HTMLOrComponent {
 		vecty.Text("text"),
 	)
 }`)
+}
+
+func TestHtmlToDst_HandlesSpecialTags(t *testing.T) {
+	cases := []struct {
+		name      string
+		attribute string
+		result    string
+	}{
+		{
+			name: "click event handled",
+			attribute: `click="RenderThis"`,
+			result: "event.Click(RenderThis)",
+		},
+		{
+			name: "change event handled",
+			attribute: `change="RenderThis"`,
+			result: "event.Change(RenderThis)",
+		},
+		{
+			name: "blur event handled",
+			attribute: `blur="RenderThis"`,
+			result: "event.Blur(RenderThis)",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			htmlS := fmt.Sprintf(`<div %s></div>`, c.attribute)
+			expr, err := htmlToDst(htmlS)
+			require.NoError(t, err)
+			requireEqStr(t, tWrapExpr(t, expr), fmt.Sprintf(`
+package thing
+
+func RenderThing(msg string) vecty.HTMLOrComponent {
+	elem.Div(
+		vecty.Markup(
+			%s,
+		),
+	)
+}`, c.result))
+		})
+	}
 }
 
 func TestHtmlToDst_ParsesClassesSeparately(t *testing.T) {

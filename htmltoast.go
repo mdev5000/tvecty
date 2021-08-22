@@ -172,6 +172,12 @@ func parseTagAttributes(existing []dst.Expr, tag *html.TagOrText) ([]dst.Expr, e
 				return existing, err
 			}
 			markupArgs = append(markupArgs, simpleCallExpr("event", "Click", []dst.Expr{expr}))
+		case "blur":
+			expr, err := parseExpression(attr.Value, false)
+			if err != nil {
+				return existing, err
+			}
+			markupArgs = append(markupArgs, simpleCallExpr("event", "Blur", []dst.Expr{expr}))
 		case "change":
 			expr, err := parseExpression(attr.Value, false)
 			if err != nil {
