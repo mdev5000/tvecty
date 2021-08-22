@@ -59,6 +59,7 @@ func init() {
 		"sub":        "Subscript",
 		"sup":        "Superscript",
 		"tbody":      "TableBody",
+		"textarea":   "TextArea",
 		"tdata":      "TableData",
 		"tfoot":      "TableFoot",
 		"thead":      "TableHead",
@@ -80,7 +81,7 @@ func init() {
 		"noscript", "object", "option", "output", "picture", "progress",
 		"quote", "ruby",
 		"script", "section", "select", "slot", "small", "source", "span", "strong", "style", "summary",
-		"table", "template", "textarea", "time", "title", "track", "video",
+		"table", "template", "time", "title", "track", "video",
 	}
 	for _, tagName := range toUpperCaseTags {
 		tagTranslations[tagName] = strings.ToUpper(tagName[0:1]) + tagName[1:]
