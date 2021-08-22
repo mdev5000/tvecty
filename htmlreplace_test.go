@@ -146,3 +146,96 @@ func MyRender() int {
 	return 0
 }`)
 }
+
+func TestSourceHtmlReplace_regression1(t *testing.T) {
+	in := `package pages
+
+import (
+    "github.com/hexops/vecty"
+    "github.com/hexops/vecty/elem"
+    "github.com/hexops/vecty/event"
+    "github.com/mdev5000/csvtransform/frontend/ajax"
+    "github.com/mdev5000/csvtransform/frontend/comps"
+    "github.com/mdev5000/csvtransform/frontend/router"
+    "github.com/mdev5000/csvtransform/requests"
+)
+
+type Output struct {
+	vecty.Core
+	Output *requests.Output
+}
+
+func (c *Output) onAddField(*vecty.Event) {
+	c.Output.Fields = append(c.Output.Fields, requests.Field{})
+	vecty.Rerender(c)
+}
+
+func (c *Output) Render() vecty.ComponentOrHTML {
+	fields := vecty.List{}
+	for _, f := range c.Output.Fields {
+		fieldC := <div class="border-solid border-2 border-light-grey-500 p-3 mb-4">
+			<div>
+        		<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="username" type="text" placeholder="Field Name" value="{f.FieldName}"/>
+			</div>
+			<div>
+        		<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="username" type="text" placeholder="Display Name" value="{f.DisplayName}"/>
+			</div>
+		</div>
+
+		fields = append(fields, fieldC)
+	}
+
+	return <div>
+		{fields}
+		<button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" click="c.onAddField">Add field</button>
+	</div>
+}
+`
+	src := bytes.NewReader([]byte(in))
+	srcOut := bytes.NewBuffer(nil)
+	_, err := sourceHtmlReplace(newHtmlTracker(), srcOut, src)
+	require.NoError(t, err)
+	requireEqStr(t, srcOut.String(), strings.Replace(`package pages
+
+import (
+    "github.com/hexops/vecty"
+    "github.com/hexops/vecty/elem"
+    "github.com/hexops/vecty/event"
+    "github.com/mdev5000/csvtransform/frontend/ajax"
+    "github.com/mdev5000/csvtransform/frontend/comps"
+    "github.com/mdev5000/csvtransform/frontend/router"
+    "github.com/mdev5000/csvtransform/requests"
+)
+
+type Output struct {
+	vecty.Core
+	Output *requests.Output
+}
+
+func (c *Output) onAddField(*vecty.Event) {
+	c.Output.Fields = append(c.Output.Fields, requests.Field{})
+	vecty.Rerender(c)
+}
+
+func (c *Output) Render() vecty.ComponentOrHTML {
+	fields := vecty.List{}
+	for _, f := range c.Output.Fields {
+		fieldC := tvecty.Html(1, :tick:<div class="border-solid border-2 border-light-grey-500 p-3 mb-4">
+			<div>
+        		<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="username" type="text" placeholder="Field Name" value="{f.FieldName}"/>
+			</div>
+			<div>
+        		<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="username" type="text" placeholder="Display Name" value="{f.DisplayName}"/>
+			</div>
+		</div>:tick:)
+
+		fields = append(fields, fieldC)
+	}
+
+	return tvecty.Html(2, :tick:<div>
+		{fields}
+		<button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" click="c.onAddField">Add field</button>
+	</div>:tick:)
+}
+`, ":tick:", "`", -1))
+}

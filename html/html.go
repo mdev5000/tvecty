@@ -34,7 +34,7 @@ func ParseHtml(r *bytes.Reader) (tag *TagOrText, htmlSrc []byte, err error) {
 				if currentDepth == 0 {
 					return lastPop, nil, nil
 				}
-				return lastPop, nil, fmt.Errorf("unexpected EOF, expected closing tag '%s'", lastPop.TagName)
+				return lastPop, nil, fmt.Errorf("unexpected EOF, expected closing tag '%s' for src:\n\n %s", lastPop.TagName, string(htmlSrc))
 			} else {
 				return lastPop, nil, err
 			}
