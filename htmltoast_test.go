@@ -220,19 +220,19 @@ func TestHtmlToDst_HandlesSpecialTags(t *testing.T) {
 		result    string
 	}{
 		{
-			name: "click event handled",
+			name:      "click event handled",
 			attribute: `click="RenderThis"`,
-			result: "event.Click(RenderThis)",
+			result:    "event.Click(RenderThis)",
 		},
 		{
-			name: "change event handled",
+			name:      "change event handled",
 			attribute: `change="RenderThis"`,
-			result: "event.Change(RenderThis)",
+			result:    "event.Change(RenderThis)",
 		},
 		{
-			name: "blur event handled",
+			name:      "blur event handled",
 			attribute: `blur="RenderThis"`,
-			result: "event.Blur(RenderThis)",
+			result:    "event.Blur(RenderThis)",
 		},
 	}
 	for _, c := range cases {
