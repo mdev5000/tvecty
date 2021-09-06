@@ -135,6 +135,13 @@ remaining text:
 stm := "more"`)
 }
 
+func TestParseSingleNode(t *testing.T) {
+	_, err := ParseHtmlString(`<input class="some-thing" />
+stm := "more"
+`)
+	require.NoError(t, err)
+}
+
 func TestRegression1(t *testing.T) {
 	src := `<div class="border-solid border-2 border-light-grey-500 p-3 mb-4">
 			<div>
@@ -305,17 +312,4 @@ func (c *CustomInputPage) outputTable() vecty.ComponentOrHTML {
         		<input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="username" type="text" placeholder="Display Name" value="{f.DisplayName}"/>
 			</div>
 		</div>`, string(htmlSrc))
-	//remaining, err := io.ReadAll(r)
-	//require.NoError(t, err)
-	//require.Equal(t, `
-	//
-	//	fields = append(fields, fieldC)
-	//}
-	//
-	//return <div>
-	//	{fields}
-	//	<button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" click="c.onAddField">Add field</button>
-	//</div>
-	//}
-	//`, string(remaining))
 }

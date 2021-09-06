@@ -72,6 +72,9 @@ func ParseHtml(r *bytes.Reader) (tag *TagOrText, htmlSrc []byte, err error) {
 			if hasAttr {
 				tag.Attr = parseAttributes(z)
 			}
+			if currentDepth == 0 {
+				return finalizeTagParsing(r, z, remainingAtStart, tag)
+			}
 			if err := stack.pushChild(tag); err != nil {
 				return lastPop, nil, err
 			}
